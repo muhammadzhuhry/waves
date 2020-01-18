@@ -17,11 +17,67 @@ app.use(cookieParser());
 const { User } = require('./models/user');
 const { Brand } = require('./models/brand');
 const { Wood } = require('./models/wood');
-
+const { Product } = require('./models/product');
 
 // Middlewares
 const { auth } = require('./middleware/auth');
 const { admin } = require('./middleware/admin');
+
+// product
+
+app.post('/api/product/article', auth, admin, (req, res) => {
+  const product = new Product(req.body);
+
+  product.save((err, value) => {
+    if (err) return res.json({success: false, err});
+
+    res.status(200).json({
+      success: true,
+      article: value
+    })
+  })
+});
+
+app.get('/api/product/articles_by_id', (req, res) => {
+  let type = req.query.type;
+  let items = req.query.id;
+
+  if (type === 'array') {
+    let ids = req.query.id.split(',');
+
+    items = [];
+    items = ids.map(item => {
+      return mongoose.Types.ObjectId(item)
+    })
+
+  }
+
+  Product.
+  find({ _id: { $in:items } }).
+  populate('brand').
+  populate('wood').
+  exec((err, value) => {
+    return res.status(200).send(value)
+  });
+});
+
+app.get('/api/product/articles', (req, res) => {
+  let order =req.query.order ? req.query.order : 'asc';
+  let sortBy = req.query.sortBy ? req.query.sortBy : '_id';
+  let limit = req.query.limit ? parseInt(req.query.limit) : 100;
+
+  Product.
+  find().
+  populate('brand').
+  populate('wood').
+  sort([[sortBy, order]]).
+  limit(limit).
+  exec((err, value) => {
+    if (err) return res.status(400).send(err);
+
+    res.send(value);
+  })
+});
 
 // wood
 
